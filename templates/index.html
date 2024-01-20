@@ -9,7 +9,7 @@
 
     <h1>Image Deblurring App</h1>
 
-    <form action="https:///upload" method="post" enctype="multipart/form-data" id="uploadForm">
+    <form action="https://image-deblur.onrender.com/upload" method="post" enctype="multipart/form-data" id="uploadForm">
         <label for="image">Select Image:</label>
         <input type="file" name="image" id="image" accept="image/*" required>
         <br>
@@ -46,7 +46,7 @@
             }
 
             // Make a request to the server to handle image deblurring
-            fetch('/upload', {
+            fetch('https://image-deblur.onrender.com/upload', {
                 method: 'POST',
                 body: formData
             })

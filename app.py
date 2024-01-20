@@ -2,8 +2,10 @@ import os
 import cv2
 from flask import Flask, Response, render_template, request, jsonify
 import base64
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 app.config.from_object(__name__)
 
 def root_dir():
