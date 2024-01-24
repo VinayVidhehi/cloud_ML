@@ -11,12 +11,13 @@ app = Flask(__name__)
 # Connect to MongoDB
 client = MongoClient('mongodb+srv://Vinay:4556%40Devaraj@cluster0.tpgkfpg.mongodb.net/')
 db = client['greenhouse']
-sensor_collection = db['values']
+training_collection = db['values']
+sensor_collection = db['sensordata']
 prediction_collection = db['predicted_sunlight_reduction']
 
 def train_model():
     # Load the dataset from MongoDB
-    df = pd.DataFrame(list(sensor_collection.find()))
+    df = pd.DataFrame(list(training_collection.find()))
     X = df[['temperature', 'humidity', 'soil_moisture']]
     y = df['sunlight_reduction']
 
