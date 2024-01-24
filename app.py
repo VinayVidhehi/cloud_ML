@@ -12,7 +12,7 @@ app = Flask(__name__)
 client = MongoClient('mongodb+srv://Vinay:4556%40Devaraj@cluster0.tpgkfpg.mongodb.net/')
 db = client['greenhouse']
 training_collection = db['values']
-sensor_collection = db['sensordata']
+sensor_collection = db['sensordatas']
 prediction_collection = db['predicted_sunlight_reduction']
 
 def train_model():
