@@ -1,31 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Image Deblurring</title>
-</head>
-<body>
-
+  </head>
+  <body>
     <h1>Image Deblurring App</h1>
 
-    <form action="https://image-deblur.onrender.com/upload" method="post" enctype="multipart/form-data" id="uploadForm">
-        <label for="image">Select Image:</label>
-        <input type="file" name="image" id="image" accept="image/*" required>
-        <br>
-        <button type="button" onclick="uploadImage()">Upload</button>
+    <form
+      action="http://127.0.0.1:9900/upload"
+      method="post"
+      enctype="multipart/form-data"
+      id="uploadForm"
+    >
+      <label for="image">Select Image:</label>
+      <input type="file" name="image" id="image" accept="image/*" required />
+      <br />
+      <button type="button" onclick="uploadImage()">Upload</button>
     </form>
 
     <div id="loading" class="hidden">
-        <div class="loader"></div>
-        <p>Deblurring in progress...</p>
+      <div class="loader"></div>
+      <p>Deblurring in progress...</p>
     </div>
 
     <div id="result" class="hidden">
-        <p>Deblurred Image:</p>
-        <img id="deblurredImage" alt="Deblurred Image">
-        <br>
-        <a id="downloadLink" href="#" download="dehazed_image.jpg">Download Dehazed Image</a>
+      <p>Deblurred Image:</p>
+      <img id="deblurredImage" alt="Deblurred Image" />
+      <br />
+      <a id="downloadLink" href="#" download="dehazed_image.jpg"
+        >Download Dehazed Image</a
+      >
     </div>
 
     <script>
@@ -33,9 +39,9 @@
             // Reset result and download link
             document.getElementById('result').classList.add('hidden');
             document.getElementById('downloadLink').setAttribute('href', '#');
-
+    
             var formData = new FormData(document.getElementById('uploadForm'));
-
+    
             // Display loading animation
             var loadingElement = document.getElementById('loading');
             if (loadingElement) {
@@ -44,45 +50,50 @@
                 console.error("Error: 'loading' element not found");
                 return;
             }
-
+    
             // Make a request to the server to handle image deblurring
-            fetch('https://image-deblur.onrender.com/upload', {
+            fetch('http://127.0.0.1:80/upload', {
                 method: 'POST',
                 body: formData
             })
             .then(response => response.json())
             .then(data => {
+                if (data.error) {
+                    // Handle server-side error
+                    console.error('Server Error:', data.error);
+                    // Display an error message to the user if necessary
+                } else {
+                    // Display the deblurred image
+                    var resultElement = document.getElementById('result');
+                    if (resultElement) {
+                        resultElement.classList.remove('hidden');
+                    } else {
+                        console.error("Error: 'result' element not found");
+                        return;
+                    }
+    
+                    var deblurredImageElement = document.getElementById('deblurredImage');
+                    if (deblurredImageElement) {
+                        deblurredImageElement.src = 'data:image/jpeg;base64,' + data.deblurred_image;
+                    } else {
+                        console.error("Error: 'deblurredImage' element not found");
+                    }
+    
+                    // Update download link
+                    var downloadLinkElement = document.getElementById('downloadLink');
+                    if (downloadLinkElement) {
+                        downloadLinkElement.setAttribute('href', 'data:image/jpeg;base64,' + data.deblurred_image);
+                    } else {
+                        console.error("Error: 'downloadLink' element not found");
+                    }
+                }
+    
                 // Hide loading animation
                 var loadingElement = document.getElementById('loading');
                 if (loadingElement) {
                     loadingElement.classList.add('hidden');
                 } else {
                     console.error("Error: 'loading' element not found");
-                    return;
-                }
-
-                // Display the deblurred image
-                var resultElement = document.getElementById('result');
-                if (resultElement) {
-                    resultElement.classList.remove('hidden');
-                } else {
-                    console.error("Error: 'result' element not found");
-                    return;
-                }
-
-                var deblurredImageElement = document.getElementById('deblurredImage');
-                if (deblurredImageElement) {
-                    deblurredImageElement.src = 'data:image/jpeg;base64,' + data.deblurred_image;
-                } else {
-                    console.error("Error: 'deblurredImage' element not found");
-                }
-
-                // Update download link
-                var downloadLinkElement = document.getElementById('downloadLink');
-                if (downloadLinkElement) {
-                    downloadLinkElement.setAttribute('href', 'data:image/jpeg;base64,' + data.deblurred_image);
-                } else {
-                    console.error("Error: 'downloadLink' element not found");
                 }
             })
             .catch(error => {
@@ -91,7 +102,6 @@
             });
         }
     </script>
-</body>
+    
+  </body>
 </html>
-
-

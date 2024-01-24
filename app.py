@@ -1,78 +1,79 @@
-import os
-import cv2
-from flask import Flask, Response, render_template, request, jsonify
-import base64
-from flask_cors import CORS
+from flask import Flask, jsonify
+from pymongo import MongoClient
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+import pandas as pd
+from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)
-app.config.from_object(__name__)
 
-def root_dir():
-    return os.path.abspath(os.path.dirname(__file__))
+# Connect to MongoDB
+client = MongoClient('mongodb+srv://Vinay:4556%40Devaraj@cluster0.tpgkfpg.mongodb.net/')
+db = client['greenhouse']
+sensor_collection = db['values']
+prediction_collection = db['predicted_sunlight_reduction']
 
-def get_file(filename):
+def train_model():
+    # Load the dataset from MongoDB
+    df = pd.DataFrame(list(sensor_collection.find()))
+    X = df[['temperature', 'humidity', 'soil_moisture']]
+    y = df['sunlight_reduction']
+
+    # Split the dataset into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Create a Linear Regression model
+    model = LinearRegression()
+
+    # Train the model
+    model.fit(X_train, y_train)
+
+    # Make predictions on the test set for evaluation
+    predictions = model.predict(X_test)
+
+    # Evaluate the model performance
+    mse = mean_squared_error(y_test, predictions)
+    print(f'Mean Squared Error: {mse}')
+
+    return model
+
+# Train the model initially
+trained_model = train_model()
+
+@app.route('/')
+def hello_world():
+    return 'greenhouse sunlight allowance calculator'
+
+@app.route('/predict_sunlight_reduction', methods=['GET'])
+def predict_sunlight_reduction():
     try:
-        src = os.path.join(root_dir(), filename)
-        return open(src).read()
-    except IOError as exc:
-        return str(exc)
+        # Get the latest data from the MongoDB database
+        latest_data = sensor_collection.find_one({}, {'_id': 0, 'temperature': 1, 'humidity': 1, 'soil_moisture': 1})
+        
+        # Ensure that the required fields are present
+        if not all(field in latest_data for field in ['temperature', 'humidity', 'soil_moisture']):
+            return jsonify({'error': 'Temperature, humidity, and soil_moisture fields are required in the database.'})
 
-def dehaze_image(input_image_path):
-    # Your dehazing logic goes here
-    # This is a placeholder example using a simple median blur
-    img = cv2.imread(input_image_path)
-    dehazed_image = cv2.medianBlur(img, 5)
+        # Extract the latest values
+        latest_temperature = latest_data['temperature']
+        latest_humidity = latest_data['humidity']
+        latest_soil_moisture = latest_data['soil_moisture']
 
-    # Encode the dehazed image to base64
-    _, buffer = cv2.imencode('.jpg', dehazed_image)
-    dehazed_base64 = base64.b64encode(buffer).decode('utf-8')
+        # Make a prediction for the new data
+        new_data_df = pd.DataFrame({'temperature': [latest_temperature], 'humidity': [latest_humidity], 'soil_moisture': [latest_soil_moisture]})
+        predicted_sunlight_reduction = trained_model.predict(new_data_df)[0]
 
-    return dehazed_base64
+        # Log the prediction to a different collection
+        timestamp = datetime.now()
+        prediction_collection.insert_one({
+            'timestamp': timestamp,
+            'predicted_sunlight_reduction': predicted_sunlight_reduction
+        })
 
-@app.route('/', methods=['GET'])
-def index():
-    # Assuming you have an 'index.html' file in the root directory
-    return render_template('index.html')
-
-@app.route('/upload', methods=['POST'])
-def upload():
-    try:
-        # Handle file upload logic here
-        uploaded_file = request.files['image']
-
-        # Print information about the uploaded file
-        print(f"Received file: {uploaded_file.filename}")
-
-        # Example: Save the uploaded file to the 'uploads' folder
-        file_path = os.path.join(root_dir(), 'uploads', uploaded_file.filename)
-        uploaded_file.save(file_path)
-        print(f"File saved to: {file_path}")
-
-        # Add your image deblurring logic here
-        dehazed_base64 = dehaze_image(file_path)
-
-        # Return a JSON response with the base64-encoded dehazed image
-        return jsonify({'deblurred_image': dehazed_base64})
-
+        return jsonify({'predicted_sunlight_reduction': predicted_sunlight_reduction})
     except Exception as e:
-        # Print any exception that might occur during the process
-        print(f"Error: {e}")
-        return "Error during file upload"
-
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def get_resource(path):
-    mimetypes = {
-        ".css": "text/css",
-        ".html": "text/html",
-        ".js": "application/javascript",
-    }
-    complete_path = os.path.join(root_dir(), path)
-    ext = os.path.splitext(path)[1]
-    mimetype = mimetypes.get(ext, "text/html")
-    content = get_file(complete_path)
-    return Response(content, mimetype=mimetype)
+        return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
-    app.run(port=9900, debug=True)
+    app.run(debug=True, port=5008)

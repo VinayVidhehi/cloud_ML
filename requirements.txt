@@ -1,6 +1,4 @@
 Flask
-numpy 
-opencv-python
-Flask
-Gunicorn
-flask-cors
+pymongo
+scikit-learn
+pandas
