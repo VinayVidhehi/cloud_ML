@@ -48,8 +48,14 @@ trained_model = train_model()
 def hello_world():
     return 'greenhouse sunlight allowance calculator'
 
+prev_temperature = None
+prev_humidity = None
+prev_soil_moisture = None
+
 @app.route('/predict_sunlight_reduction', methods=['GET'])
 def predict_sunlight_reduction():
+    global prev_temperature, prev_humidity, prev_soil_moisture
+
     try:
         # Get the latest data from the MongoDB database
         latest_data = sensor_collection.find_one({}, {'_id': 0, 'temperature': 1, 'humidity': 1, 'soil_moisture': 1})
@@ -63,18 +69,32 @@ def predict_sunlight_reduction():
         latest_humidity = latest_data['humidity']
         latest_soil_moisture = latest_data['soil_moisture']
 
-        # Make a prediction for the new data
-        new_data_df = pd.DataFrame({'temperature': [latest_temperature], 'humidity': [latest_humidity], 'soil_moisture': [latest_soil_moisture]})
-        predicted_sunlight_reduction = trained_model.predict(new_data_df)[0]
+        # Check if there are changes in sensor values
+        if (
+            latest_temperature != prev_temperature or
+            latest_humidity != prev_humidity or
+            latest_soil_moisture != prev_soil_moisture
+        ):
+            # Make a prediction for the new data
+            new_data_df = pd.DataFrame({'temperature': [latest_temperature], 'humidity': [latest_humidity], 'soil_moisture': [latest_soil_moisture]})
+            predicted_sunlight_reduction = trained_model.predict(new_data_df)[0]
 
-        # Log the prediction to a different collection
-        timestamp = datetime.now()
-        prediction_collection.insert_one({
-            'timestamp': timestamp,
-            'predicted_sunlight_reduction': predicted_sunlight_reduction
-        })
+            # Log the prediction to a different collection
+            timestamp = datetime.now()
+            prediction_collection.insert_one({
+                'timestamp': timestamp,
+                'predicted_sunlight_reduction': predicted_sunlight_reduction
+            })
 
-        return jsonify({'predicted_sunlight_reduction': predicted_sunlight_reduction})
+            # Update previous sensor values
+            prev_temperature = latest_temperature
+            prev_humidity = latest_humidity
+            prev_soil_moisture = latest_soil_moisture
+
+            return jsonify({'predicted_sunlight_reduction': predicted_sunlight_reduction})
+        else:
+            # No changes in sensor values, return a message indicating no calculation needed
+            return jsonify({'message': 'No changes in sensor values. Sunlight reduction calculation not needed.'})
     except Exception as e:
         return jsonify({'error': str(e)})
 
