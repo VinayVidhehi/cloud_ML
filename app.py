@@ -54,27 +54,27 @@ prev_soil_moisture = None
 
 @app.route('/predict_sunlight_reduction', methods=['GET'])
 def predict_sunlight_reduction():
-    global prev_temperature, prev_humidity, prev_soil_moisture
+    global prev_timestamp
 
     try:
         # Get the latest data from the MongoDB database
-        latest_data = sensor_collection.find_one({}, {'_id': 0, 'temperature': 1, 'humidity': 1, 'soil_moisture': 1})
+        latest_data = sensor_collection.find_one({}, sort=[('_id', -1)])
         
         # Ensure that the required fields are present
         if not all(field in latest_data for field in ['temperature', 'humidity', 'soil_moisture']):
             return jsonify({'error': 'Temperature, humidity, and soil_moisture fields are required in the database.'})
 
         # Extract the latest values
-        latest_temperature = latest_data['temperature']
-        latest_humidity = latest_data['humidity']
-        latest_soil_moisture = latest_data['soil_moisture']
+        latest_timestamp = latest_data['timestamp']
 
-        # Check if there are changes in sensor values
-        if (
-            latest_temperature != prev_temperature or
-            latest_humidity != prev_humidity or
-            latest_soil_moisture != prev_soil_moisture
-        ):
+        # Check if there are new sensor values
+        if latest_timestamp != prev_timestamp:
+            prev_timestamp = latest_timestamp
+
+            latest_temperature = latest_data['temperature']
+            latest_humidity = latest_data['humidity']
+            latest_soil_moisture = latest_data['soil_moisture']
+
             # Make a prediction for the new data
             new_data_df = pd.DataFrame({'temperature': [latest_temperature], 'humidity': [latest_humidity], 'soil_moisture': [latest_soil_moisture]})
             predicted_sunlight_reduction = trained_model.predict(new_data_df)[0]
@@ -85,11 +85,6 @@ def predict_sunlight_reduction():
                 'timestamp': timestamp,
                 'predicted_sunlight_reduction': predicted_sunlight_reduction
             })
-
-            # Update previous sensor values
-            prev_temperature = latest_temperature
-            prev_humidity = latest_humidity
-            prev_soil_moisture = latest_soil_moisture
 
             return jsonify({'predicted_sunlight_reduction': predicted_sunlight_reduction})
         else:
