@@ -15,7 +15,7 @@ client = MongoClient('mongodb+srv://Vinay:4556%40Devaraj@cluster0.tpgkfpg.mongod
 db = client['greenhouse']
 training_collection = db['values']
 sensor_collection = db['sensordatas']
-prediction_collection = db['predicted_sunlight_reduction']
+prediction_collection = db['sunlightdatas']
 
 def train_model():
     # Load the dataset from MongoDB
