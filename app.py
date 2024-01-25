@@ -4,9 +4,11 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import pandas as pd
+from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)
 
 # Connect to MongoDB
 client = MongoClient('mongodb+srv://Vinay:4556%40Devaraj@cluster0.tpgkfpg.mongodb.net/')
