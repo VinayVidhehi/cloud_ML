@@ -9,7 +9,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Connect to MongoDB
-client = MongoClient('mongodb+srv://Vinay:4556%40Devaraj@cluster0.tpgkfpg.mongodb.net/')
+client = MongoClient('mongodb+srv://vinay:somethingforcloud@cloud-project.pwk1tsn.mongodb.net/')
 db = client['greenhouse']
 training_collection = db['values']
 sensor_collection = db['sensordatas']
@@ -77,4 +77,4 @@ def predict_sunlight_reduction():
         return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5008)
+    app.run(debug=True, port=5004)
