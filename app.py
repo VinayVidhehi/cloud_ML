@@ -51,10 +51,10 @@ def hello_world():
 prev_temperature = None
 prev_humidity = None
 prev_soil_moisture = None
+prev_timestamp = None 
 
 @app.route('/predict_sunlight_reduction', methods=['GET'])
 def predict_sunlight_reduction():
-    global prev_timestamp
 
     try:
         # Get the latest data from the MongoDB database
