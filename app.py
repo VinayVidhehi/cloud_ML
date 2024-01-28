@@ -4,9 +4,11 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import pandas as pd
+from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)
 
 # Connect to MongoDB
 client = MongoClient('mongodb+srv://vinay:somethingforcloud@cloud-project.pwk1tsn.mongodb.net/')
@@ -46,33 +48,48 @@ trained_model = train_model()
 def hello_world():
     return 'greenhouse sunlight allowance calculator'
 
+prev_temperature = None
+prev_humidity = None
+prev_soil_moisture = None
+
 @app.route('/predict_sunlight_reduction', methods=['GET'])
 def predict_sunlight_reduction():
+    global prev_timestamp
+
     try:
         # Get the latest data from the MongoDB database
-        latest_data = sensor_collection.find_one({}, {'_id': 0, 'temperature': 1, 'humidity': 1, 'soil_moisture': 1})
+        latest_data = sensor_collection.find_one({}, sort=[('_id', -1)])
         
         # Ensure that the required fields are present
         if not all(field in latest_data for field in ['temperature', 'humidity', 'soil_moisture']):
             return jsonify({'error': 'Temperature, humidity, and soil_moisture fields are required in the database.'})
 
         # Extract the latest values
-        latest_temperature = latest_data['temperature']
-        latest_humidity = latest_data['humidity']
-        latest_soil_moisture = latest_data['soil_moisture']
+        latest_timestamp = latest_data['timestamp']
 
-        # Make a prediction for the new data
-        new_data_df = pd.DataFrame({'temperature': [latest_temperature], 'humidity': [latest_humidity], 'soil_moisture': [latest_soil_moisture]})
-        predicted_sunlight_reduction = trained_model.predict(new_data_df)[0]
+        # Check if there are new sensor values
+        if latest_timestamp != prev_timestamp:
+            prev_timestamp = latest_timestamp
 
-        # Log the prediction to a different collection
-        timestamp = datetime.now()
-        prediction_collection.insert_one({
-            'timestamp': timestamp,
-            'predicted_sunlight_reduction': predicted_sunlight_reduction
-        })
+            latest_temperature = latest_data['temperature']
+            latest_humidity = latest_data['humidity']
+            latest_soil_moisture = latest_data['soil_moisture']
 
-        return jsonify({'predicted_sunlight_reduction': predicted_sunlight_reduction})
+            # Make a prediction for the new data
+            new_data_df = pd.DataFrame({'temperature': [latest_temperature], 'humidity': [latest_humidity], 'soil_moisture': [latest_soil_moisture]})
+            predicted_sunlight_reduction = trained_model.predict(new_data_df)[0]
+
+            # Log the prediction to a different collection
+            timestamp = datetime.now()
+            prediction_collection.insert_one({
+                'timestamp': timestamp,
+                'predicted_sunlight_reduction': predicted_sunlight_reduction
+            })
+
+            return jsonify({'predicted_sunlight_reduction': predicted_sunlight_reduction})
+        else:
+            # No changes in sensor values, return a message indicating no calculation needed
+            return jsonify({'message': 'No changes in sensor values. Sunlight reduction calculation not needed.'})
     except Exception as e:
         return jsonify({'error': str(e)})
 

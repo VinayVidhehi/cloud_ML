@@ -3,3 +3,4 @@ Flask
 pymongo
 scikit-learn
 pandas
+Flask-CORS
