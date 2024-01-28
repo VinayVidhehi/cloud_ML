@@ -44,17 +44,16 @@ def train_model():
 # Train the model initially
 trained_model = train_model()
 
+# Initialize global variables
+prev_timestamp = None
+
 @app.route('/')
 def hello_world():
     return 'greenhouse sunlight allowance calculator'
 
-prev_temperature = None
-prev_humidity = None
-prev_soil_moisture = None
-prev_timestamp = None 
-
 @app.route('/predict_sunlight_reduction', methods=['GET'])
 def predict_sunlight_reduction():
+    global prev_timestamp
 
     try:
         # Get the latest data from the MongoDB database
@@ -64,7 +63,7 @@ def predict_sunlight_reduction():
         if not all(field in latest_data for field in ['temperature', 'humidity', 'soil_moisture']):
             return jsonify({'error': 'Temperature, humidity, and soil_moisture fields are required in the database.'})
 
-        # Extract the latest values
+        # Extract the latest timestamp
         latest_timestamp = latest_data['timestamp']
 
         # Check if there are new sensor values
